@@ -19,6 +19,13 @@ from util.dist import init_distributed, is_distributed, is_primary, get_rank, ba
 from util.misc import my_worker_init_fn
 from util.io import save_checkpoint, resume_if_possible
 import wandb
+import open3d as o3d
+import sys
+sys.path.append('./Uni3D/')
+from Uni3D.main import inference, retrieve
+import open_clip
+import Uni3D.model.uni3d as models
+
 
 
 def wandb_log(*args, **kwargs):
@@ -465,12 +472,13 @@ def test_model(args, model, model_no_ddp, criterion, dataset_config, dataloaders
     if args.test_ckpt is None or not os.path.isfile(args.test_ckpt):
         f"Please specify a test checkpoint using --test_ckpt. Found invalid value {args.test_ckpt}"
         sys.exit(1)
+    print("conf_thresh: ", args.conf_thresh)
     sd = torch.load(args.test_ckpt, map_location=torch.device("cuda"))
     model_no_ddp.load_state_dict(sd["model"],strict=False)
     criterion = None  # do not compute loss for speed-up; Comment out to see test loss
     epoch = -1
     curr_iter = 0
-    evaluate(
+    ap_calculator, detected_objects = evaluate(
         args,
         epoch,
         model,
@@ -479,6 +487,64 @@ def test_model(args, model, model_no_ddp, criterion, dataset_config, dataloaders
         dataloaders["test"],
         curr_iter,
     )
+    device = 'cuda'
+    clip_model, _, _ = open_clip.create_model_and_transforms(model_name="EVA02-E-14-plus", pretrained="./Uni3D/downloads/open_clip_pytorch_model.bin")
+    clip_model.to(device)
+
+    # create model
+    uni3d_model = getattr(models, 'create_uni3d')(args=args)
+    uni3d_model.to(device)
+    query = input("Please enter the objects you are interested: ")
+
+    retrieve(args, uni3d_model, clip_model, detected_objects, query, device, "scannet")
+
+
+
+    # if is_primary():
+    #     print("==" * 10)
+    #     print(f"Test model; Metrics {metric_str}")
+    #     print("==" * 10)
+    # if args.test_size:
+    #     metrics = ap_calculator.compute_metrics(size='S')
+    #     metric_str = ap_calculator.metrics_to_str(metrics)
+    #     if is_primary():
+    #         print("==" * 10)
+    #         print(f"Test model S; Metrics {metric_str}")
+    #         print("==" * 10)
+    #     metrics = ap_calculator.compute_metrics(size='M')
+    #     metric_str = ap_calculator.metrics_to_str(metrics)
+    #     if is_primary():
+    #         print("==" * 10)
+    #         print(f"Test model M; Metrics {metric_str}")
+    #         print("==" * 10)
+    #     metrics = ap_calculator.compute_metrics(size='L')
+    #     metric_str = ap_calculator.metrics_to_str(metrics)
+    #     if is_primary():
+    #         print("==" * 10)
+    #         print(f"Test model L; Metrics {metric_str}")
+    #         print("==" * 10)
+
+# def do_inference(args, model, model_no_ddp, criterion, dataset_config, dataloaders):
+#     if args.test_ckpt is None or not os.path.isfile(args.test_ckpt):
+#         f"Please specify a test checkpoint using --test_ckpt. Found invalid value {args.test_ckpt}"
+#         sys.exit(1)
+
+#     sd = torch.load(args.test_ckpt, map_location=torch.device("cpu"))
+#     model_no_ddp.load_state_dict(sd["model"],strict=False)
+#     criterion = None  # do not compute loss for speed-up; Comment out to see test loss
+#     epoch = -1
+#     curr_iter = 0
+#     ap_calculator, _ , pred_boxs = evaluate(
+#         args,
+#         epoch,
+#         model,
+#         criterion,
+#         dataset_config,
+#         dataloaders["test"],
+#         curr_iter,
+#     )
+
+    
 
 
 def main(local_rank, args):
