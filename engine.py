@@ -265,18 +265,11 @@ def evaluate(
                 filtered_points = cropped_object[largest_cluster_indices]
                 if len(filtered_points) < args.npoints / 2:
                     detected_objects.append(cropped_object)
+                    np.save(f"./results/objects/object_{i}.npy", cropped_object)
                 else:
                     detected_objects.append(filtered_points)
+                    np.save(f"./results/objects/object_{i}.npy", cropped_object)
+
+    return ap_calculator, detected_objects
 
 
-        if torch.cuda.is_available():
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.benchmark = True
-            torch.backends.cudnn.deterministic = False
-            torch.backends.cudnn.allow_tf32 = True 
-
-
-        predicted_labels = inference(args, uni3d_model, clip_model, detected_objects, device, "scannet")
-        pred_boxs = [pred_box for pred_cls, pred_box, con in batch_pred_map_cls[0] if con > args.conf_thresh]
-        print("Scene name:", scene_name)
-        print("predicted results: ", predicted_labels)
