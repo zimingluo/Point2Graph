@@ -70,6 +70,11 @@ The test script is in the `run.sh` file. Once you have the datasets and model pr
 bash run.sh
 ```
 
+The script performs two functions:
+
+1. Get a set of point cloud of objects with unknown class and store them at `./results/objects/`
+2. Retrieve and visualize the 3D object point cloud most relevant to the user's query
+
 ## Acknowledgement
 
 Point2Graph is built on the [V-DETR](https://github.com/V-DETR/V-DETR), and [Uni3D](https://github.com/baaivision/Uni3D).
