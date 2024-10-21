@@ -25,7 +25,7 @@ from Uni3D.utils.logger import setup_logging
 from Uni3D.utils.scheduler import warmup_cosine_lr
 from Uni3D.utils.optim import create_optimizer, get_all_parameters, get_loss_scale_for_deepspeed, get_grad_norm_
 from datetime import datetime
-
+from util.o3d_helper import visualize_pcd
 import open_clip
 import model.uni3d as models
 import sys
@@ -621,14 +621,7 @@ def test_zeroshot_3d(args, model, clip_model):
     tokenizer = SimpleTokenizer()
 
     test_dataset = utils.get_dataset(None, tokenizer, args, 'val')
-    # print("test_dataset:", type(test_dataset))
-    # print("len:", len(test_dataset))
-    # a,b,c,d = test_dataset[0]
-    # print("data0 shape:", a.shape)
-    # a,b,c,d = test_dataset[1]
-    # print("data1 shape:", a.shape)
-    # a,b,c,d = test_dataset[2]
-    # print("data2 shape:", a.shape)
+
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True, sampler=None, drop_last=False
@@ -663,7 +656,62 @@ def pad_collate_fn(batch):
     
     return torch.stack(padded_xyz), torch.stack(padded_rgb)
 
-        
+def retrieve(args, model, clip_model, detected_objects, query, device, validate_dataset_name='scannet'):
+
+    # switch to evaluate mode
+    checkpoint = torch.load(args.ckpt_path, map_location='cpu')
+    sd = checkpoint['module']
+    model.load_state_dict(sd)
+
+    tokenizer = SimpleTokenizer()
+    test_dataset = PointCloudDataset(detected_objects)
+
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=8, shuffle=False,
+        num_workers=0, pin_memory=True, sampler=None, drop_last=False, collate_fn=pad_collate_fn
+    )
+
+    model.eval()
+
+    with open(os.path.join("./Uni3D/data", 'templates.json')) as f:
+        templates = json.load(f)["modelnet40_64"]
+
+    with torch.no_grad():
+        texts = [t.format(query) for t in templates]
+        texts = tokenizer(texts).to(device=device, non_blocking=True)
+        if len(texts.shape) < 2:
+            texts = texts[None, ...]
+        text_features = clip_model.encode_text(texts)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        text_features = text_features.mean(dim=0)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+        pc_features = []
+        for i, (pc, rgb) in enumerate(test_loader):
+
+            pc = pc.to(device=device, non_blocking=True)
+            rgb = rgb.to(device=device, non_blocking=True)
+            feature = torch.cat((pc, rgb),dim=-1)
+            # target = target.to(device=args.device, non_blocking=True)
+
+            # encode pc
+            pc_feature = utils.get_model(model).encode_pc(feature)
+            pc_feature = pc_feature / pc_feature.norm(dim=-1, keepdim=True)
+
+            pc_features.append(pc_feature)
+
+        pc_features = torch.cat(pc_features, dim=0)
+        logits_per_pc = pc_features.float() @ text_features.float().t()
+
+        maxk = 1
+        _, pred = logits_per_pc.topk(maxk, 0, True, True)
+        index = pred.cpu().numpy()[0]
+
+        print(f"The index of retrieved object is {index}.")
+        retrieved_object = np.load(f"./results/objects/object_{index}.npy")
+        visualize_pcd(retrieved_object)
+
+
 def inference(args, model, clip_model, detected_objects, device, validate_dataset_name='scannet'):
 
     # switch to evaluate mode
@@ -736,49 +784,6 @@ def inference(args, model, clip_model, detected_objects, device, validate_datase
   
 
         return predicted_labels
-
-            # measure accuracy and record loss
-            # (acc1, acc3, acc5), correct = accuracy(logits_per_pc, target, topk=(1, 3, 5))
-            # TODO: fix the all reduce for the correct variable, assuming only one process for evaluation!
-            # acc1, acc3, acc5 = utils.scaled_all_reduce([acc1, acc3, acc5])
-            # top1.update(acc1.item(), pc.size(0))
-            # top3.update(acc3.item(), pc.size(0))
-            # top5.update(acc5.item(), pc.size(0))
-
-
-    #         top1_accurate = correct[:1].squeeze()
-    #         top3_accurate = correct[:3].float().sum(0, keepdim=True).squeeze()
-    #         top5_accurate = correct[:5].float().sum(0, keepdim=True).squeeze()
-    #         for idx, name in enumerate(target_name):
-    #             if top1_accurate[idx].item():
-    #                 per_class_correct_top1[name] += 1
-    #             if top3_accurate[idx].item():
-    #                 per_class_correct_top3[name] += 1
-    #             if top5_accurate[idx].item():
-    #                 per_class_correct_top5[name] += 1
-
-    #         if i % args.print_freq == 0:
-    #             progress.display(i)
-
-    #     top1_accuracy_per_class = {}
-    #     top3_accuracy_per_class = {}
-    #     top5_accuracy_per_class = {}
-    #     for name in per_class_stats.keys():
-    #         top1_accuracy_per_class[name] = per_class_correct_top1[name] / per_class_stats[name]
-    #         top3_accuracy_per_class[name] = per_class_correct_top3[name] / per_class_stats[name]
-    #         top5_accuracy_per_class[name] = per_class_correct_top5[name] / per_class_stats[name]
-
-    #     top1_accuracy_per_class = collections.OrderedDict(top1_accuracy_per_class)
-    #     top3_accuracy_per_class = collections.OrderedDict(top3_accuracy_per_class)
-    #     top5_accuracy_per_class = collections.OrderedDict(top5_accuracy_per_class)
-    #     logging.info(','.join(top1_accuracy_per_class.keys()))
-    #     logging.info(','.join([str(value) for value in top1_accuracy_per_class.values()]))
-    #     logging.info(','.join([str(value) for value in top3_accuracy_per_class.values()]))        
-    #     logging.info(','.join([str(value) for value in top5_accuracy_per_class.values()]))
-    # progress.synchronize()
-    # logging.info('0-shot * Acc@1 {top1.avg:.3f} Acc@3 {top3.avg:.3f} Acc@5 {top5.avg:.3f}')
-    # return {'acc1': top1.avg, 'acc3': top3.avg, 'acc5': top5.avg}
-
 
 
 class AverageMeter(object):
