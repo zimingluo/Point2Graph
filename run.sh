@@ -30,48 +30,24 @@ else
     echo "Invalid option"
     exit 1
 fi
-eps_values=(0.04 0.08)
-min_points_values=(3 8)
-for eps in "${eps_values[@]}"; do
-for min_points in "${min_points_values[@]}"; do
-    echo "Running with eps_values=$eps, min_points=$min_points"
-    python main.py \
-    --dataset_name scannet \
-    --dataset_root_dir ./scannet/ \
-    --meta_data_dir ./scannet/meta_data/ \
-    --test_ckpt ./models/scannet_540ep.pth \
-    --auto_test \
-    --test_only  \
-    --conf_thresh 0.01  \
-    --pc-model $pc_model \
-    --pc-feat-dim $pc_feat_dim \
-    --pc-encoder-dim 512 \
-    --ckpt_path $ckpt_path \
-    --embed-dim 1024 \
-    --group-size 64 \
-    --num-group 512 \
-    --inference_only \
-    --npoints 10000 \
-    --eps $eps \
-    --min_points $min_points
-done
-done
-
-# ckpt_path="./Uni3D/downloads/ckpt/model_giant.pt"
-# # --standalone \
-# #     --nproc-per-node=1
-
-# python -m torch.distributed.run  ./Uni3D/main.py \
-#     --model $model \
-#     --batch-size 32 \
-#     --npoints 10000 \
-#     --num-group 512 \
-#     --group-size 64 \
-#     --pc-encoder-dim 512 \
-#     --clip-model $clip_model \
-#     --pretrained $pretrained \
-#     --pc-model $pc_model \
-#     --pc-feat-dim $pc_feat_dim \
-#     --embed-dim 1024 \
-#     --evaluate_3d \
-#     --ckpt_path $ckpt_path \
+eps=0.04
+min_points=3
+python main.py \
+--dataset_name scannet \
+--dataset_root_dir ./scannet/ \
+--meta_data_dir ./scannet/meta_data/ \
+--test_ckpt ./models/scannet_540ep.pth \
+--auto_test \
+--test_only  \
+--conf_thresh 0.01  \
+--pc-model $pc_model \
+--pc-feat-dim $pc_feat_dim \
+--pc-encoder-dim 512 \
+--ckpt_path $ckpt_path \
+--embed-dim 1024 \
+--group-size 64 \
+--num-group 512 \
+--inference_only \
+--npoints 10000 \
+--eps $eps \
+--min_points $min_points
