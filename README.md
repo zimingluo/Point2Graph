@@ -1,10 +1,14 @@
-# Point2Graph: An End-to-end Point Cloud-based 3D Open-Vocabulary Scene Graph for Robot Navigation
+## [Point2Graph: An End-to-end Point Cloud-based 3D Open-Vocabulary Scene Graph for Robot Navigation](https://arxiv.org/abs/2409.10350)
 
 This is the implementation of **Object Detection and Classification** module of the paper "Point2Graph: An End-to-end Point Cloud-based 3D Open-Vocabulary Scene Graph for Robot Navigation". 
 
 Authors: [Yifan Xu](https://www.linkedin.com/in/yifan-xu-43876120b/), [Ziming Luo](https://zimingluo.github.io/), [Qianwei Wang](https://www.linkedin.com/in/qianwei-wang-945bb9292/), [Vineet Kamat](https://live.engin.umich.edu/), [Carol Menassa](https://cee.engin.umich.edu/people/menassa-carol-c/)
 
-### Object Detection and Classification
+## News:
+
+[2025/02] Our paper is accepted by ICRA2025 🎉🎉🎉
+
+## Object Detection and Classification Pipeline
 
 This module consists of two stages: (1) detection and localization using class-agnostic bounding boxes and DBSCAN filtering for object refinement, and (2) classification via cross-modal retrieval, connecting 3D point cloud data with textual descriptions, without requiring annotations or RGB-D alignment.
 
