@@ -6,7 +6,7 @@ Authors: [Yifan Xu](https://www.linkedin.com/in/yifan-xu-43876120b/), [Ziming Lu
 
 ## News:
 
-[2025/02] Our paper is accepted by ICRA2025 🎉🎉🎉
+[2025/02] Our paper is accepted by **ICRA2025** 🎉🎉🎉
 
 ## Object Detection and Classification Pipeline
 
