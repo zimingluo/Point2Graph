@@ -45,8 +45,8 @@ mim install mmcv-full==1.6.1
 **Step 4.** install third party support.
 
 ```bash
-cd third_party/pointnet2/ && python setup.py install --user
-cd ../..
+cd pointnet2/ && python setup.py install --user
+cd ..
 cd utils && python cython_compile.py build_ext --inplace
 cd ..
 ```
